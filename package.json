@@ -1,0 +1,19 @@
+{
+  "name": "userscript-wk-flagger",
+  "version": "1.0.0",
+  "description": "Add coloured flags to reviews as a memorization aid",
+  "main": "WK Flagger.user.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Gorbit99",
+  "license": "MIT",
+  "dependencies": {
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.29",
+    "@types/node": "^20.10.6",
+    "typedoc": "^0.25.6"
+  }
+}
