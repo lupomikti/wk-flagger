@@ -9,10 +9,13 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=wanikani.com
 // @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/360533ebf801fcfaee95a5f8c9c69802430b5d62/flagger.css
 // @grant        GM_getResourceText
+// @grant        unsafeWindow
 // @license      MIT
 // ==/UserScript==
-(function (wkof) {
+(function () {
     'use strict';
+    /* global wkof */
+    const { wkof } = unsafeWindow || window;
     const cacheFilename = "wkFlaggerData";
     const cacheFileVersion = "2.1";
     const scriptId = "wkFlagger";
@@ -36,7 +39,7 @@
         cyan: { color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
         magenta: { color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
     };
-    if (!window.wkof) {
+    if (!wkof) {
         alert(`${scriptName} requires Wanikani Open Framework.\nYou will now be forwarded to installation instructions.`);
         window.location.href = 'https://community.wanikani.com/t/instructions-installing-wanikani-open-framework/28549';
         return;
@@ -858,5 +861,5 @@
         return currentId;
     }
     document.addEventListener("turbo:load", () => init());
-})(window.wkof);
+})();
 export {};
