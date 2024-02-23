@@ -1259,9 +1259,15 @@ type StateData = {
       display: inline-block;
     }
 
-    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleting"] input[type="checkbox"],
-    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"] input[type="checkbox"] {
-      display: grid;
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleting"],
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"] {
+      input[type="checkbox"] {
+        display: grid;
+      }
+
+      .flagger-settings-content__list-row-btn--edit {
+        display: none;
+      }
     }
     
     #wk-flagger-settings .flagger-settings-content__list-row-btn {
