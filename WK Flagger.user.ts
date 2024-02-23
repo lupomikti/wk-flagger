@@ -380,7 +380,7 @@ type StateData = {
                 }
             }
             else if (row.dataset.state as EditingState === 'deleting') {
-                row.dataset.set = previousStateMap[flagName].state
+                row.dataset.state = previousStateMap[flagName].state
                 previousStateMap[flagName].state = 'deleting'
             }
             else {
