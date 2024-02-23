@@ -32,8 +32,8 @@
         purple: { color: "#7722aa", questionType: "both", shortText: "A default value. Change me!", longText: "" },
         green: { color: "#44ff44", questionType: "both", shortText: "A default value. Change me!", longText: "" },
         silver: { color: "#c0c0c0", questionType: "both", shortText: "A default value. Change me!", longText: "" },
-        cyan: { color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
-        magenta: { color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
+        cyan: { color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
+        magenta: { color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
     };
     if (!window.wkof) {
         alert(`${scriptName} requires Wanikani Open Framework.\nYou will now be forwarded to installation instructions.`);
@@ -304,15 +304,52 @@
             }
         }
         // if after toggling editing on a single row all rows are not in the initial state then the global editing state should be true
-        let allRows = document.querySelectorAll('.flagger-settings-content__list-row[data-state]');
+        let allRows = document.querySelectorAll('#wk-flagger-settings [data-state]');
         globalEditingState = Array.from(allRows).some((row) => row.dataset.state !== 'initial');
         shortDescriptionInput?.focus();
     }
     function toggleDeletingState(event) {
-        // TODO make function that toggles the whole flag list to be in deleting mode (saves previous state in map)
-        // this should expose delete buttons next to rows, hide edit buttons
-        // all rows data-state="deleting"
-        // since this is a toggle, this should also set all rows that are not 'deleted' back to their previous state
+        let rowsToToggle = document.querySelectorAll('#wk-flagger-settings [data-state]');
+        let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete');
+        let addNewFlagButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-add');
+        for (let row of rowsToToggle) {
+            let flagName = row.dataset.forFlag;
+            if (!flagName)
+                continue;
+            if (row.dataset.state === 'deleted') {
+                // disable or re-enable the checkbox
+                if (row.classList.length === 1) {
+                    let checkbox = row.querySelector('input[type="checkbox"]');
+                    checkbox.disabled = !checkbox.disabled;
+                }
+            }
+            else if (row.dataset.state === 'deleting') {
+                row.dataset.set = previousStateMap[flagName].state;
+                previousStateMap[flagName].state = 'deleting';
+            }
+            else {
+                previousStateMap[flagName].state = row.dataset.state;
+                row.dataset.state = 'deleting';
+            }
+        }
+        if (!addNewFlagButton || !markForDeleteButton) {
+            // throw some kind of error (don't use `throw`) and handle it
+            return;
+        }
+        markForDeleteButton.textContent = addNewFlagButton.checkVisibility() ? 'Confirm Selected' : 'Mark Flags for Deletion';
+        // taking advantage of some default css from wanikani wherein `[hidden] { display: none !important; }`
+        addNewFlagButton.hidden = addNewFlagButton.checkVisibility();
+        globalEditingState = Array.from(rowsToToggle).some((row) => row.dataset.state !== 'initial');
+    }
+    function toggleDeletedState(event) {
+        let currentRow = event.currentTarget.parentElement;
+        if (!globalEditingState || !currentRow || currentRow.dataset.state !== 'deleting')
+            return;
+        let currentFlag = currentRow.dataset.forFlag;
+        let flagRows = document.querySelectorAll(`#wk-flagger-settings [data-state][data-for-flag="${currentFlag}"]`);
+        flagRows.forEach((row) => {
+            row.dataset.state = 'deleted';
+        });
     }
     function toggleHidden(event) {
         // get all rows with data-state editing or adding and data-hover-text-hidden (true or false; they should all be the same value but that's not enforced)
@@ -421,13 +458,6 @@
         // previousStateMap = {}
         // remove the style element for this script and call insertCSS again so that any new flags have their colors added
     }
-    function toggleDeletedState(event) {
-        // TODO
-        // make sure the global editing state variable is true and the row's data-state is 'deleting'
-        // deleting will work by setting the data-state to 'deleted' and a commit will do the deletion from cache using the rows that are marked as such
-        // do not save previous state (deleting) to map; an undo will set row back to 'deleting' and toggleDeleting will use previousStateMap to set row to previous state
-        // data-state 'deleted' should also apply css that visually makes it apparent the row is being deleted, such as changing opactity and adding an icon or border
-    }
     function addNewFlagRow(event) {
         if (!globalEditingState)
             globalEditingState = true;
@@ -468,6 +498,7 @@
         let toggleDeleteButton = document.createElement('button');
         toggleDeleteButton.setAttribute('class', `wk-button flagger-settings-content__list-row--button-delete`);
         toggleDeleteButton.textContent = "Mark Flags for Deletion";
+        toggleDeleteButton.addEventListener('click', toggleDeletingState);
         markDeleteButtonContainer.append(toggleDeleteButton);
         let addNewFlagButtonContainer = document.createElement('div');
         addNewFlagButtonContainer.classList.add('flagger-settings-content__list-row--button');
@@ -590,6 +621,12 @@
             // @ts-expect-error implicit conversion
             flagInputLengthCounter.textContent = 40 - flagShortText.length;
         }
+        let deleteCheckbox = document.createElement('input');
+        deleteCheckbox.type = "checkbox";
+        deleteCheckbox.id = `${flagName}-flag-selection`;
+        deleteCheckbox.name = `${flagName}-flag-selection`;
+        deleteCheckbox.setAttribute('data-for-flag', flagName);
+        deleteCheckbox.addEventListener('input', toggleDeletedState);
         let cancelIcon = document.createElement('i');
         cancelIcon.setAttribute('class', `fa-solid fa-xmark ${classNamespace}list-row-btn ${classNamespace}list-row-btn--cancel`);
         cancelIcon.setAttribute('data-for-flag', flagName);
@@ -599,7 +636,7 @@
         let editIcon = document.createElement('i');
         editIcon.setAttribute('class', `fa-regular fa-pencil ${classNamespace}list-row-btn ${classNamespace}list-row-btn--edit`);
         editIcon.setAttribute('data-for-flag', flagName);
-        shortTextRow.append(flagIconLabel || flagIcon, flagColorPicker, flagText, flagInput, flagInputLengthCounter, cancelIcon, saveIcon, editIcon);
+        shortTextRow.append(flagIconLabel || flagIcon, flagColorPicker, flagText, flagInput, flagInputLengthCounter, deleteCheckbox, cancelIcon, saveIcon, editIcon);
         // ------ Flag Info Row ------
         let flagInfoRow = document.createElement('div');
         flagInfoRow.setAttribute('class', `${classNamespace}list-row ${classNamespace}list-row--flag-info`);
@@ -776,9 +813,7 @@
     }
     function insertCss(refresh = false) {
         const flagColors = Object.entries(wkFlaggerData.availableFlags)
-            .map((value) => `${statisticsClass} .wk-flagger__wrapper .wk-flagger__flag--${value[0]}, #wk-flagger-settings .wk-flagger__flag--${value[0]} {
-        color: ${value[1].color}
-      }`)
+            .map((value) => `${statisticsClass} .wk-flagger__wrapper .wk-flagger__flag--${value[0]}, #wk-flagger-settings .wk-flagger__flag--${value[0]} { color: ${value[1].color} }`)
             .join("\n");
         const css = `
     .wk-flagger__wrapper {
@@ -883,6 +918,11 @@
       &:not(:first-child) {
         margin-top: 10px;
       }
+    }
+
+    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"],
+    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"] * {
+      opacity: 0.65;
     }
 
     #wk-flagger-settings .flagger-settings-content__list-row[data-state="editing"],
@@ -1001,9 +1041,51 @@
       box-shadow: inset 0 1px 1px rgba(0,0,0,0.075), 0 0 8px rgba(82,168,236,0.6);
     }
 
+    #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"] {
+      appearance: none;
+      margin: 0;
+      margin-left: 10px;
+      font: inherit;
+      width: 1.5rem;
+      height: 1.5em;
+      border: 0.1em solid var(--color-text-mid, #9e9e9e);
+      border-radius: 3px;
+      display: none;
+      place-content: center;
+    }
+
+    #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"]::before {
+      content: "✕";
+      transform: scale(0) rotate(45deg);
+      transition: 120ms transform ease-in-out;
+      color: red;
+    }
+    
+    #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"]:checked::before {
+      transform: scale(1) rotate(0);
+    }
+    
+    #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"]:focus {
+      outline: max(2px, 0.1em) solid currentColor;
+      outline-offset: max(2px, 0.1em)
+    }
+    
+    #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"]:disabled {
+      cursor: not-allowed;
+      color: var(--color-text-mid, #9e9e9e);
+      &::before {
+        color: var(--color-text-mid, #9e9e9e);
+      }
+    }
+
     #wk-flagger-settings .flagger-settings-content__list-row[data-state="editing"] input[type="text"],
     #wk-flagger-settings .flagger-settings-content__list-row[data-state="adding"] input[type="text"] {
-        display: inline-block;
+      display: inline-block;
+    }
+
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleting"] input[type="checkbox"],
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"] input[type="checkbox"] {
+      display: grid;
     }
     
     #wk-flagger-settings .flagger-settings-content__list-row-btn {

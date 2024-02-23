@@ -76,8 +76,8 @@ type StateData = {
         purple: {color: "#7722aa", questionType: "both", shortText: "A default value. Change me!", longText: ""},
         green: {color: "#44ff44", questionType: "both", shortText: "A default value. Change me!", longText: ""},
         silver: {color: "#c0c0c0", questionType: "both", shortText: "A default value. Change me!", longText: ""},
-        cyan: {color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: ""},
-        magenta: {color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: ""},
+        cyan: {color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: ""},
+        magenta: {color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: ""},
     }
 
     if (!window.wkof) {
@@ -1086,6 +1086,11 @@ type StateData = {
       &:not(:first-child) {
         margin-top: 10px;
       }
+    }
+
+    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"],
+    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"] * {
+      opacity: 0.65;
     }
 
     #wk-flagger-settings .flagger-settings-content__list-row[data-state="editing"],
