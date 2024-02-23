@@ -249,7 +249,7 @@ dialog::backdrop {
 
 #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"]:focus {
   outline: max(2px, 0.1em) solid currentColor;
-  outline-offset: max(2px, 0.1em)
+  outline-offset: max(2px, 0.1em);
 }
 
 #wk-flagger-settings .flagger-settings-content__list-row input[type="checkbox"]:disabled {
