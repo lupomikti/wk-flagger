@@ -374,7 +374,7 @@ type StateData = {
             
             // get other two rows with same flag name
             let siblingRows = [
-                row.parentElement?.querySelector(`.flagger-settings-content__list-row--flag-info[data-for-flag="${flagName}]"`) as HTMLElement,
+                row.parentElement?.querySelector(`.flagger-settings-content__list-row--flag-info[data-for-flag="${flagName}"]`) as HTMLElement,
                 row.parentElement?.querySelector(`.flagger-settings-content__list-row--hover-text[data-for-flag="${flagName}"]`) as HTMLElement
             ]
 

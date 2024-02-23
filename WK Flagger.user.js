@@ -318,7 +318,7 @@
                 continue;
             // get other two rows with same flag name
             let siblingRows = [
-                row.parentElement?.querySelector(`.flagger-settings-content__list-row--flag-info[data-for-flag="${flagName}]"`),
+                row.parentElement?.querySelector(`.flagger-settings-content__list-row--flag-info[data-for-flag="${flagName}"]`),
                 row.parentElement?.querySelector(`.flagger-settings-content__list-row--hover-text[data-for-flag="${flagName}"]`)
             ];
             if (siblingRows.some(row => row == null)) {
