@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-02-19
+// @version      2024-02-23
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
@@ -364,28 +364,36 @@ type StateData = {
     }
 
     function toggleDeletingState(event: Event) {
-        let rowsToToggle: NodeListOf<HTMLElement> = document.querySelectorAll('#wk-flagger-settings [data-state]')
+        let mainRows: HTMLElement[] = Array.from(document.querySelectorAll('#wk-flagger-settings [data-state]') as NodeListOf<HTMLElement>).filter((row) => row.classList.length === 1)
         let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete') as HTMLButtonElement
         let addNewFlagButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-add') as HTMLButtonElement
 
-        for (let row of rowsToToggle) {
+        for (let row of mainRows) {
             let flagName = row.dataset.forFlag
             if (!flagName) continue
+            
+            // get other two rows with same flag name
+            let siblingRows = [
+                row.parentElement?.querySelector(`.flagger-settings-content__list-row--flag-info[data-for-flag="${flagName}]"`) as HTMLElement,
+                row.parentElement?.querySelector(`.flagger-settings-content__list-row--hover-text[data-for-flag="${flagName}"]`) as HTMLElement
+            ]
+
+            if (siblingRows.some(row => row == null)) {
+                // error
+                continue
+            }
 
             if (row.dataset.state as EditingState === 'deleted') {
-                // disable or re-enable the checkbox
-                if (row.classList.length === 1) {
-                    let checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement
-                    checkbox.disabled = !checkbox.disabled
-                }
+                let checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement
+                checkbox.disabled = !checkbox.disabled
             }
             else if (row.dataset.state as EditingState === 'deleting') {
-                row.dataset.state = previousStateMap[flagName].state
+                row.dataset.state = siblingRows[0].dataset.state = siblingRows[1].dataset.state = previousStateMap[flagName].state
                 previousStateMap[flagName].state = 'deleting'
             }
             else {
                 previousStateMap[flagName].state = row.dataset.state as EditingState
-                row.dataset.state = 'deleting'
+                row.dataset.state = siblingRows[0].dataset.state = siblingRows[1].dataset.state = 'deleting'
             }
         }
 
@@ -398,7 +406,7 @@ type StateData = {
         // taking advantage of some default css from wanikani wherein `[hidden] { display: none !important; }`
         addNewFlagButton.hidden = addNewFlagButton.checkVisibility()
 
-        globalEditingState = Array.from(rowsToToggle).some((row) => row.dataset.state as EditingState !== 'initial')
+        globalEditingState = Array.from(mainRows).some((row) => row.dataset.state as EditingState !== 'initial')
     }
 
     function toggleDeletedState(event: Event) {
@@ -1088,8 +1096,8 @@ type StateData = {
       }
     }
 
-    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"],
-    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"] * {
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"],
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"] * {
       opacity: 0.65;
     }
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-02-19
+// @version      2024-02-23
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
@@ -309,27 +309,33 @@
         shortDescriptionInput?.focus();
     }
     function toggleDeletingState(event) {
-        let rowsToToggle = document.querySelectorAll('#wk-flagger-settings [data-state]');
+        let mainRows = Array.from(document.querySelectorAll('#wk-flagger-settings [data-state]')).filter((row) => row.classList.length === 1);
         let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete');
         let addNewFlagButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-add');
-        for (let row of rowsToToggle) {
+        for (let row of mainRows) {
             let flagName = row.dataset.forFlag;
             if (!flagName)
                 continue;
+            // get other two rows with same flag name
+            let siblingRows = [
+                row.parentElement?.querySelector(`.flagger-settings-content__list-row--flag-info[data-for-flag="${flagName}]"`),
+                row.parentElement?.querySelector(`.flagger-settings-content__list-row--hover-text[data-for-flag="${flagName}"]`)
+            ];
+            if (siblingRows.some(row => row == null)) {
+                // error
+                continue;
+            }
             if (row.dataset.state === 'deleted') {
-                // disable or re-enable the checkbox
-                if (row.classList.length === 1) {
-                    let checkbox = row.querySelector('input[type="checkbox"]');
-                    checkbox.disabled = !checkbox.disabled;
-                }
+                let checkbox = row.querySelector('input[type="checkbox"]');
+                checkbox.disabled = !checkbox.disabled;
             }
             else if (row.dataset.state === 'deleting') {
-                row.dataset.state = previousStateMap[flagName].state;
+                row.dataset.state = siblingRows[0].dataset.state = siblingRows[1].dataset.state = previousStateMap[flagName].state;
                 previousStateMap[flagName].state = 'deleting';
             }
             else {
                 previousStateMap[flagName].state = row.dataset.state;
-                row.dataset.state = 'deleting';
+                row.dataset.state = siblingRows[0].dataset.state = siblingRows[1].dataset.state = 'deleting';
             }
         }
         if (!addNewFlagButton || !markForDeleteButton) {
@@ -339,7 +345,7 @@
         markForDeleteButton.textContent = addNewFlagButton.checkVisibility() ? 'Confirm Selected' : 'Mark Flags for Deletion';
         // taking advantage of some default css from wanikani wherein `[hidden] { display: none !important; }`
         addNewFlagButton.hidden = addNewFlagButton.checkVisibility();
-        globalEditingState = Array.from(rowsToToggle).some((row) => row.dataset.state !== 'initial');
+        globalEditingState = Array.from(mainRows).some((row) => row.dataset.state !== 'initial');
     }
     function toggleDeletedState(event) {
         let currentRow = event.currentTarget.parentElement;
@@ -920,8 +926,8 @@
       }
     }
 
-    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"],
-    #wk-flagger-settings .flagger-settings-content__list-roww[data-state="deleted"] * {
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"],
+    #wk-flagger-settings .flagger-settings-content__list-row[data-state="deleted"] * {
       opacity: 0.65;
     }
 
