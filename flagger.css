@@ -109,7 +109,7 @@ dialog::backdrop {
 
 #wk-flagger-settings .flagger-settings-content__list-row[data-state="editing"],
 #wk-flagger-settings .flagger-settings-content__list-row[data-state="adding"] {
-  label:has(i) {
+  label:has(svg) {
     border-radius: 2px;
     outline: dashed 1px var(--color-text);
     outline-offset: 3px;
@@ -279,17 +279,17 @@ dialog::backdrop {
 #wk-flagger-settings .flagger-settings-content__list-row-btn {
   cursor: pointer;
   margin-left: 10px;
-  color: var(--color-text-mid, --color-text);
+  fill: var(--color-text-mid, --color-text);
   opacity: 70%;
 }
   
 #wk-flagger-settings .flagger-settings-content__list-row-btn--cancel {
-  color: #f44;
+  fill: #f44;
   display: none;
 }
 
 #wk-flagger-settings .flagger-settings-content__list-row-btn--save {
-  color: #4f4;
+  fill: #4f4;
   display: none;
 }
 
@@ -345,7 +345,15 @@ dialog::backdrop {
   
   &:hover {
     color: var(--color-tertiary, --color-button-default-hover-text, #444);
+
+    .wk-flagger__flag-labels--header-icon {
+      fill: var(--color-tertiary, --color-button-default-hover-text, #444);
+    }
   }
+}
+
+.wk-flagger__flag-labels--header-icon {
+  fill: #999;
 }
   
 .wk-flagger__flag-labels--header-text {

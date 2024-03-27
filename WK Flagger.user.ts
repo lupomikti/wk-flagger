@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-02-23
+// @version      2024-03-26
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
@@ -17,7 +17,13 @@ import { WKOF, Menu } from './wkof'
 
 declare global {
     interface Window {
-        wkof: WKOF & Menu
+        wkof: WKOF & Menu,
+        Icons2: {
+            readonly version: number,
+            addCustomIcons: (icons: (string | number[])[][]) => void
+            customIcon: (icon: string) => HTMLElement
+            customIconTxt: (icon: string) => string
+        }
     }
 }
 
@@ -56,8 +62,8 @@ type StateData = {
 (function () {
     'use strict';
 
-    /* global wkof */
-    const { wkof } = unsafeWindow || window
+    /* global wkof, Icons2 */
+    const { wkof, Icons2 } = unsafeWindow || window
 
     const cacheFilename = "wkFlaggerData"
     const cacheFileVersion = "2.1"
@@ -84,6 +90,20 @@ type StateData = {
         cyan: {color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: ""},
         magenta: {color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: ""},
     }
+
+    // Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.
+    Icons2.addCustomIcons([
+        [
+            'flag-empty',
+            "M48 24C48 10.7 37.3 0 24 0S0 10.7 0 24V64 350.5 400v88c0 13.3 10.7 24 24 24s24-10.7 24-24V388l80.3-20.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L48 52V24zm0 77.5l96.6-24.2c27-6.7 55.5-3.6 80.4 8.8c54.9 27.4 118.7 29.7 175 6.8V334.7l-24.4 9.1c-33.7 12.6-71.2 10.7-103.4-5.4c-48.2-24.1-103.3-30.1-155.6-17.1L48 338.5v-237z",
+            [448, 512],
+        ],
+        [
+            'flag',
+            "M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32V64 368 480c0 17.7 14.3 32 32 32s32-14.3 32-32V352l64.3-16.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L64 48V32z",
+            [448, 512],
+        ]
+    ])
 
     if (!wkof) {
         alert(`${scriptName} requires Wanikani Open Framework.\nYou will now be forwarded to installation instructions.`)
@@ -162,6 +182,7 @@ type StateData = {
         return false // is empty object so return false to treat as falsy
     }
 
+    // TODO make sure init does not run if the error is caught
     wkof.file_cache.load(cacheFilename).then(handleCacheLoad)
         .catch(() => wkof.file_cache.save(cacheFilename, {dataVersion: "0.0", availableFlags: defaultFlags, itemFlagMap: {}}))
         .then(() => init())
@@ -233,7 +254,7 @@ type StateData = {
         wkof.Menu.insert_script_link(config)
     }
 
-    function toggleEditing(this: HTMLElement, event: Event, isBeingSaved: boolean = false) {
+    function toggleEditing(event: Event, isBeingSaved: boolean = false) {
         let flagName = (event.currentTarget as HTMLElement).dataset.forFlag // currentTarget should be the button that was pressed, save/cancel; for-flag will be *new* name if it was changed
         if (!flagName) return
 
@@ -249,7 +270,7 @@ type StateData = {
             let currentState = container.dataset.state as EditingState // the state BEFORE being toggled
 
             // if the current row is in the adding state, the user clicked the cancel button, and it was never saved before
-            if (currentState === 'adding' && this.className.includes('--cancel') && flagName.includes('naeneigja')) {
+            if (currentState === 'adding' && !isBeingSaved && flagName.includes('naeneigja')) {
                 container.remove()
                 continue
             }
@@ -262,7 +283,7 @@ type StateData = {
             }
 
             for (let child of container.childNodes as NodeListOf<HTMLElement>) {
-                if ((child.tagName === 'I' && child.classList.contains('wk-flagger__flag')) || (child.tagName === 'LABEL' && child.firstChild?.nodeName === 'I')) {
+                if ((child.tagName === 'SVG' && child.classList.contains('wk-flagger__flag')) || (child.tagName === 'LABEL' && child.firstChild?.nodeName === 'SVG')) {
                     if (!['adding', 'editing'].includes(currentState)) {
                         // wrap icon in a label for color picker input
                         let wrapperLabel = document.createElement('label')
@@ -304,7 +325,7 @@ type StateData = {
                         if (inputElement.id.includes('short-text')) {
                             shortDescriptionInput = inputElement
                             inputElement.value = Array.from(container.childNodes).find(el => el.nodeName === 'SPAN')?.textContent ?? ''
-                            // @ts-expect-error implicit conversion from string to number to string
+                            // @ts-ignore implicit conversion from string to number to string
                             inputElement.nextElementSibling.textContent = (inputElement.getAttribute('maxlength') ?? 40) - inputElement.value.length // set counter
                             continue
                         }
@@ -624,17 +645,18 @@ type StateData = {
         settingsDialog.showModal()
     }
 
-    function closeSettingsDialog(event: Event) {
-        event.preventDefault()
+    function closeSettingsDialog(event?: Event) {
         settingsDialog = document.getElementById('wk-flagger-settings') as HTMLDialogElement
 
         if (globalEditingState) {
-            if (confirm(`You have unsaved changes. Are you sure you wish to close the settings without saving?`)) settingsDialog.close()
+            if (confirm(`You have unsaved changes. Are you sure you wish to close the settings without saving?`)) {
+                previousStateMap = {}
+                settingsDialog.close()
+            }
             else return
         }
 
         previousStateMap = {}
-
         settingsDialog.close()
     }
 
@@ -652,12 +674,14 @@ type StateData = {
         shortTextRow.setAttribute('data-for-flag', flagName)
         shortTextRow.setAttribute('data-state', startingState)
 
-        let flagIcon = document.createElement('i')
+        let flagIcon: HTMLElement
         if (!isAddedFlagRow) {
-            flagIcon.setAttribute('class', `fa-solid fa-flag wk-flagger__flag wk-flagger__flag--${flagName}`)
+            flagIcon = Icons2.customIcon('flag')
+            flagIcon.setAttribute('class', `wk-flagger__flag wk-flagger__flag--${flagName}`)
         }
         else {
-            flagIcon.setAttribute('class', `fa-regular fa-flag wk-flagger__flag`)
+            flagIcon = Icons2.customIcon('flag-empty')
+            flagIcon.setAttribute('class', `wk-flagger__flag`)
         }
         flagIcon.setAttribute('data-color-value', `${flagCssValue}`)
         flagIcon.setAttribute('data-for-flag', flagName)
@@ -706,7 +730,7 @@ type StateData = {
             let maxLength = (event.target as HTMLInputElement).getAttribute('maxlength') ?? 40
             let boundCounter = document.querySelector(`.flagger-settings-content__counter[data-for-flag="${flagName}"]`)
             if (boundCounter) {
-                // @ts-expect-error implicit conversion from string to number to string
+                // @ts-ignore implicit conversion from string to number to string
                 boundCounter.textContent = maxLength - this.value.length
                 if (this.value.length <= 15) {
                     boundCounter.classList.remove('color-warn', 'color-alert')
@@ -733,7 +757,7 @@ type StateData = {
 
         if (isAddedFlagRow) {
             flagInput.value = flagShortText
-            // @ts-expect-error implicit conversion
+            // @ts-ignore implicit conversion
             flagInputLengthCounter.textContent = 40 - flagShortText.length
         }
 
@@ -745,16 +769,16 @@ type StateData = {
 
         deleteCheckbox.addEventListener('input', toggleDeletedState)
 
-        let cancelIcon = document.createElement('i')
-        cancelIcon.setAttribute('class', `fa-solid fa-xmark ${classNamespace}list-row-btn ${classNamespace}list-row-btn--cancel`)
+        let cancelIcon = Icons2.customIcon('cross')
+        cancelIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--cancel`)
         cancelIcon.setAttribute('data-for-flag', flagName)
 
-        let saveIcon = document.createElement('i')
-        saveIcon.setAttribute('class', `fa-solid fa-check ${classNamespace}list-row-btn ${classNamespace}list-row-btn--save`)
+        let saveIcon = Icons2.customIcon('check')
+        saveIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--save`)
         saveIcon.setAttribute('data-for-flag', flagName)
 
-        let editIcon = document.createElement('i')
-        editIcon.setAttribute('class', `fa-regular fa-pencil ${classNamespace}list-row-btn ${classNamespace}list-row-btn--edit`)
+        let editIcon = Icons2.customIcon('pencil')
+        editIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--edit`)
         editIcon.setAttribute('data-for-flag', flagName)
 
         shortTextRow.append(flagIconLabel || flagIcon, flagColorPicker, flagText, flagInput, flagInputLengthCounter, deleteCheckbox, cancelIcon, saveIcon, editIcon)
@@ -823,7 +847,6 @@ type StateData = {
     }
 
     function createFlagMeaningRows(): HTMLElement[] {
-        const classNamespace = "flagger-settings-content__"
         let rowList = [] as HTMLElement[]
 
         for (const flagPair of Object.entries(wkFlaggerData.availableFlags)) {
@@ -839,21 +862,24 @@ type StateData = {
         const itemId = getCurrentItemId()
         const flagElement = document.querySelector(".wk-flagger__flag--button")
 
+        if (!flagElement) {
+            alert("WK Flagger: Something went wrong! The flag dropdown is missing.")
+            return
+        }
+
         const color = wkFlaggerData.itemFlagMap[itemId]
-        flagElement?.setAttribute("class", "fa-flag wk-flagger__flag wk-flagger__flag--button")
+        flagElement.setAttribute("class", "wk-flagger__flag wk-flagger__flag--button")
         if (color === undefined) {
-            flagElement?.classList.add("fa-regular")
+            flagElement.innerHTML = createFlag().innerHTML
         } else {
-            flagElement?.classList.add("fa-solid", `wk-flagger__flag--${color}`)
+            flagElement.classList.add(`wk-flagger__flag--${color}`)
         }
     }
 
-    function createFlag(type: string, className?: string | undefined) {
-        const flagElement = document.createElement("i")
-        flagElement.classList.add(`fa-${type}`, "fa-flag", "wk-flagger__flag")
-        if (className) {
-            flagElement.classList.add(`wk-flagger__flag--${className}`)
-        }
+    function createFlag(className?: string | undefined, isEmpty: boolean = false) {
+        const flagElement = Icons2.customIcon(`flag${isEmpty ? '-empty' : ''}`)
+        flagElement.classList.add("wk-flagger__flag")
+        if (className) flagElement.classList.add(`wk-flagger__flag--${className}`)
         return flagElement
     }
 
@@ -878,7 +904,7 @@ type StateData = {
         legendHeader.classList.add(`wk-flagger__flag-labels--header`)
         legendHeader.title = "WK Flagger Labels"
 
-        let headerFlag = createFlag('solid')
+        let headerFlag = createFlag()
         headerFlag.classList.add(`wk-flagger__flag-labels--header-icon`)
         headerFlag.ariaHidden = "true"
 
@@ -909,7 +935,7 @@ type StateData = {
             let entryFlag = document.createElement('div')
             entryFlag.classList.add(`wk-flagger__flag-labels--flag`)
 
-            let flagIcon = createFlag('solid', flagName)
+            let flagIcon = createFlag(flagName)
 
             entryFlag.append(flagIcon)
             entryFlagWrapper.append(entryFlag)
@@ -951,7 +977,7 @@ type StateData = {
         const flagElementWrapper = document.createElement("div")
         flagElementWrapper.classList.add("wk-flagger__wrapper")
 
-        const flagElement = createFlag("regular", "button")
+        const flagElement = createFlag("button", true)
         flagElement.addEventListener("click", () => toggleDropdown())
 
         flagElementWrapper.append(flagElement)
@@ -961,7 +987,7 @@ type StateData = {
         dropdownElement.classList.add("wk-flagger__dropdown")
         flagElementWrapper.append(dropdownElement)
 
-        const dropdownNoFlag = createFlag("regular", "no-flag")
+        const dropdownNoFlag = createFlag("no-flag", true)
         dropdownNoFlag.addEventListener("click", () => {
             setFlagForCurrentItem(undefined)
             toggleDropdown(false)
@@ -969,7 +995,7 @@ type StateData = {
         })
 
         const dropdownColoredFlags = Object.keys(wkFlaggerData.availableFlags).map((name) => {
-            const flag = createFlag("solid", name)
+            const flag = createFlag(name)
             flag.addEventListener("click", () => {
                 setFlagForCurrentItem(name)
                 toggleDropdown(false)
@@ -993,11 +1019,11 @@ type StateData = {
 
     function insertCss(refresh = false) {
         const flagColors = `${statisticsClass} .wk-flagger__wrapper, #wk-flagger-settings, .wk-flagger__flag-labels-button {\n${Object.entries(wkFlaggerData.availableFlags).map((kvp) => {
-            return `  .wk-flagger__flag--${kvp[0]} { color: ${kvp[1].color} }`
+            return `  .wk-flagger__flag--${kvp[0]} { color: ${kvp[1].color}; }`
         }).join('\n')}\n}`
 
         let css = GM_getResourceText('flagger-style')
-        css += `\n${flagColors}`
+        css += `\n\n${flagColors}`
 
         if (refresh) {
             (document.getElementById('wk-flagger-css') as HTMLStyleElement).innerHTML = css
