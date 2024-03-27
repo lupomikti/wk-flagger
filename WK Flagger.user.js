@@ -1,21 +1,21 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-02-23
+// @version      2024-03-26
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
 // @match        https://preview.wanikani.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=wanikani.com
-// @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/360533ebf801fcfaee95a5f8c9c69802430b5d62/flagger.css
+// @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/9c48411810c4334ef83b677e566ba94de62164b8/flagger.css
 // @grant        GM_getResourceText
 // @grant        unsafeWindow
 // @license      MIT
 // ==/UserScript==
 (function () {
     'use strict';
-    /* global wkof */
-    const { wkof } = unsafeWindow || window;
+    /* global wkof, Icons2 */
+    const { wkof, Icons2 } = unsafeWindow || window;
     const cacheFilename = "wkFlaggerData";
     const cacheFileVersion = "2.1";
     const scriptId = "wkFlagger";
@@ -39,6 +39,19 @@
         cyan: { color: "#44ffff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
         magenta: { color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
     };
+    // Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.
+    Icons2.addCustomIcons([
+        [
+            'flag-empty',
+            "M48 24C48 10.7 37.3 0 24 0S0 10.7 0 24V64 350.5 400v88c0 13.3 10.7 24 24 24s24-10.7 24-24V388l80.3-20.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L48 52V24zm0 77.5l96.6-24.2c27-6.7 55.5-3.6 80.4 8.8c54.9 27.4 118.7 29.7 175 6.8V334.7l-24.4 9.1c-33.7 12.6-71.2 10.7-103.4-5.4c-48.2-24.1-103.3-30.1-155.6-17.1L48 338.5v-237z",
+            [448, 512],
+        ],
+        [
+            'flag',
+            "M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32V64 368 480c0 17.7 14.3 32 32 32s32-14.3 32-32V352l64.3-16.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L64 48V32z",
+            [448, 512],
+        ]
+    ]);
     if (!wkof) {
         alert(`${scriptName} requires Wanikani Open Framework.\nYou will now be forwarded to installation instructions.`);
         window.location.href = 'https://community.wanikani.com/t/instructions-installing-wanikani-open-framework/28549';
@@ -109,6 +122,7 @@
         }
         return false; // is empty object so return false to treat as falsy
     }
+    // TODO make sure init does not run if the error is caught
     wkof.file_cache.load(cacheFilename).then(handleCacheLoad)
         .catch(() => wkof.file_cache.save(cacheFilename, { dataVersion: "0.0", availableFlags: defaultFlags, itemFlagMap: {} }))
         .then(() => init());
@@ -185,7 +199,7 @@
         for (let container of elementsToChange) {
             let currentState = container.dataset.state; // the state BEFORE being toggled
             // if the current row is in the adding state, the user clicked the cancel button, and it was never saved before
-            if (currentState === 'adding' && this.className.includes('--cancel') && flagName.includes('naeneigja')) {
+            if (currentState === 'adding' && !isBeingSaved && flagName.includes('naeneigja')) {
                 container.remove();
                 continue;
             }
@@ -195,7 +209,7 @@
                 previousStateMap[flagName].state = currentState;
             }
             for (let child of container.childNodes) {
-                if ((child.tagName === 'I' && child.classList.contains('wk-flagger__flag')) || (child.tagName === 'LABEL' && child.firstChild?.nodeName === 'I')) {
+                if ((child.tagName === 'SVG' && child.classList.contains('wk-flagger__flag')) || (child.tagName === 'LABEL' && child.firstChild?.nodeName === 'SVG')) {
                     if (!['adding', 'editing'].includes(currentState)) {
                         // wrap icon in a label for color picker input
                         let wrapperLabel = document.createElement('label');
@@ -234,7 +248,7 @@
                         if (inputElement.id.includes('short-text')) {
                             shortDescriptionInput = inputElement;
                             inputElement.value = Array.from(container.childNodes).find(el => el.nodeName === 'SPAN')?.textContent ?? '';
-                            // @ts-expect-error implicit conversion from string to number to string
+                            // @ts-ignore implicit conversion from string to number to string
                             inputElement.nextElementSibling.textContent = (inputElement.getAttribute('maxlength') ?? 40) - inputElement.value.length; // set counter
                             continue;
                         }
@@ -441,32 +455,98 @@
     }
     function saveAndCommit(event) {
         // TODO
-        // check that we are in the editing state before saving (the global editing state variable is true)
-        //   if any elements have data-state = 'deleting', toggleDeleting off
-        //   if no elements have data-state = 'edited', 'deleted', 'added', 'adding', or 'editing', simply close the dialog
-        //   if no elements have data-state = 'edited', 'deleted', or 'added' but some do have 'editing' or 'adding', then call saveRowChanges for each row still in 'editing' or 'adding'
-        //   we should now have elements with data-state = 'edited', 'deleted', or 'added' and none with 'editing' or 'adding'
-        // get the values of the inputs/flags with data-state = 'edited', use their data-for-flag value and the presence of the name attribute containing flag-hover to know which flag to update and whether to update hover text
-        //   add the flags to be updated to its own list
-        // get the values of the inputs/flags with data-state = 'added', ...
-        //   add to their own list
-        // get the flag names of the rows that have been marked for deletion and check if that flag name has any values using it in the map
+        if (!globalEditingState) {
+            // error
+            return;
+        }
+        let saveButtonsOfRowsInAddingOrEditing = settingsDialog.querySelectorAll(`[data-state="adding"] .flagger-settings-content__list-row-btn--save, [data-state="editing"] .flagger-settings-content__list-row-btn--save`);
+        saveButtonsOfRowsInAddingOrEditing.forEach(btn => { btn.click(); }); // call saveRowChanges via the save buttons
+        let rowsInDeleting = settingsDialog.querySelectorAll(`[data-state="deleting"]`);
+        if (rowsInDeleting && rowsInDeleting.length > 0)
+            toggleDeletingState();
+        // if after saving rows and toggling 'deleting' state we have exited the editing state, close the dialog as there are no changes to commit
+        if (!globalEditingState)
+            closeSettingsDialog();
+        // polyfill for Object.groupBy but only works with Arrays instead of any Iterable
+        const groupBy = function (array, callbackFn) {
+            return array.reduce((acc, val, i) => {
+                // normally wouldn't need the null coalescence since `undefined` will be coerced into "undefined"
+                (acc[callbackFn(val, i) ?? 'undefined'] ||= []).push(val);
+                return acc;
+            }, Object.create(null));
+        };
+        // my own implementation to avoid having to import something like lodash into the script
+        const invertBy = function (obj, callbackFn) {
+            return Object.entries(obj).reduce((acc, [key, value]) => {
+                (acc[callbackFn(value)] ||= []).push(key);
+                return acc;
+            }, {});
+        };
+        let inputsOfEditedRows = settingsDialog.querySelectorAll(`.flagger-settings-content__flag-list [data-state="edited"] input[data-for-flag], .flagger-settings-content__flag-list [data-state="edited"] select[data-for-flag]`);
+        // Object.groupBy not typed yet (coming in 5.4). Sadly will require a target of esnext (and eventually a minimum of es2024), so this polyfill will have to do
+        let groupedInputs = groupBy(Array.from(inputsOfEditedRows), (input) => input.dataset.forFlag);
+        const idToPropertyMap = {
+            'color-picker': 'color',
+            'short-text': 'shortText',
+            'display': 'questionType',
+            'hover': 'longText'
+        };
+        const buildFlagDataValue = (obj, input) => {
+            let currentId = input.id;
+            const slicePos = currentId.search('flag-') + 5;
+            const currentIdEnder = currentId.slice(slicePos);
+            return currentIdEnder in idToPropertyMap ? (obj[idToPropertyMap[currentIdEnder]] = input.value, obj) : obj;
+        };
+        // list of key-value pairs [name:string, value:FlagData["name"]]
+        let flagsToUpdate = [];
+        for (const flagName of Object.keys(groupedInputs)) {
+            flagsToUpdate.push([flagName, groupedInputs[flagName].reduce(buildFlagDataValue, {})]);
+        }
+        let inputsOfAddedRows = settingsDialog.querySelectorAll(`.flagger-settings-content__flag-list [data-state="added"] input[data-for-flag], .flagger-settings-content__flag-list [data-state="added"] select[data-for-flag]`);
+        groupedInputs = groupBy(Array.from(inputsOfAddedRows), (input => input.dataset.forflag));
+        // list of key-value pairs [name:string, value:FlagData["name"]]
+        let flagsToAdd = [];
+        for (const flagName of Object.keys(groupedInputs)) {
+            flagsToAdd.push([flagName, groupedInputs[flagName].reduce(buildFlagDataValue, {})]);
+        }
+        // get the flag names of the rows that have been marked for deletion and check if that flag name has any values using it in the item map
         //   if values using the flag name exist in the map, delay deletion, alert user and prompt them for a replacement value if desired, allow them to select no replacement and inform this will remove the items from the map
-        //   add flags to be deleted to another separate list
+        let flagNamesToBeDeleted = Array.from(document.querySelectorAll('[data-state="deleted"] input[type="checkbox"]')).map(checkbox => checkbox.dataset.forFlag);
+        // object that maps flag names to an array of item IDs that currently have that flag as a value
+        let itemsToDisassociateByName = invertBy(wkFlaggerData.itemFlagMap, assignedColor => flagNamesToBeDeleted.includes(assignedColor) ? assignedColor : "other");
+        // the names of the flags for which there exist items that are mapped to that flag | used in the UI for asking for replacement
+        let deletedFlagsWithItems = Object.entries(itemsToDisassociateByName).flatMap(([color, itemIdList]) => itemIdList.length > 0 ? [color] : []);
+        if (deletedFlagsWithItems.length > 0) {
+            let replacementMap = askForReplacements(deletedFlagsWithItems);
+            replaceFlagsInItemFlagMap(replacementMap);
+        }
         // check that no flags in update list are in delete list OR make sure user understands delete trumps update
+        // filter out flags in update list with changed names (name in availableFlags or not) and add them to a new list of name changes
+        //   this new list will inform us that we need to find the initial name using previousStateMap and delete from availableFlags
         // check that no flags in addition list are in availableFlags already; for the ones that are, add them to the update list so the values can be updated, inform the user
-        // check that flags in delete list are in availableFlags; for the ones that aren't, remove the related rows with no need to do a cache operation
+        // check that flags in delete list are in availableFlags; for the ones that aren't, remove them from the deletion list as the rows will be replaced upon next open of settings
         // save a copy of the data object before operations for rollback
         // do updates first, going through flags to update and finding them in the data, updating their values
         // spread new flags into availableFlags, also add flags that had their names changed as new flags then delete the old entries using their initial name
-        // delete item map values with flag name that will be deleted
-        // delete flag from availableFlags
+        // delete item map values with flag name that will be deleted if no replacement was given
+        //   if replacement given, find item map values with the old flag and change them to the replacement value
+        // delete remaining flags in deletion list from availableFlags
         // save the cache if there were no errors, if errors rollback
-        // delete rows of flags that were deleted from the html
-        // set all remaining rows to initial data-state
-        // close the dialog
-        // previousStateMap = {}
-        // remove the style element for this script and call insertCSS again so that any new flags have their colors added
+        // remove all children of flag-list, just in case
+        settingsDialog.querySelector(`.flagger-settings-content__flag-list`)?.replaceChildren();
+        previousStateMap = {};
+        settingsDialog.close();
+        insertCss(true /* refresh */);
+    }
+    function askForReplacements(flags) {
+        // TODO
+        // because delete trumps update, a flag that is scheduled to have its name changed will instead be deleted
+        // this is actually ensured by the UI, as a flag can only be deleted if it was in the 'deleted' state, in which case it would not be in the 'edited' state
+        // deletion must also use initial names from previousStateMap. the passed in flag name will be the most recently soft-saved name
+        return {};
+    }
+    function replaceFlagsInItemFlagMap(mapOfReplacements) {
+        // TODO
     }
     function addNewFlagRow(event) {
         if (!globalEditingState)
@@ -530,11 +610,12 @@
         settingsDialog.showModal();
     }
     function closeSettingsDialog(event) {
-        event.preventDefault();
         settingsDialog = document.getElementById('wk-flagger-settings');
         if (globalEditingState) {
-            if (confirm(`You have unsaved changes. Are you sure you wish to close the settings without saving?`))
+            if (confirm(`You have unsaved changes. Are you sure you wish to close the settings without saving?`)) {
+                previousStateMap = {};
                 settingsDialog.close();
+            }
             else
                 return;
         }
@@ -552,12 +633,14 @@
         shortTextRow.setAttribute('class', `${classNamespace}list-row`);
         shortTextRow.setAttribute('data-for-flag', flagName);
         shortTextRow.setAttribute('data-state', startingState);
-        let flagIcon = document.createElement('i');
+        let flagIcon;
         if (!isAddedFlagRow) {
-            flagIcon.setAttribute('class', `fa-solid fa-flag wk-flagger__flag wk-flagger__flag--${flagName}`);
+            flagIcon = Icons2.customIcon('flag');
+            flagIcon.setAttribute('class', `wk-flagger__flag wk-flagger__flag--${flagName}`);
         }
         else {
-            flagIcon.setAttribute('class', `fa-regular fa-flag wk-flagger__flag`);
+            flagIcon = Icons2.customIcon('flag-empty');
+            flagIcon.setAttribute('class', `wk-flagger__flag`);
         }
         flagIcon.setAttribute('data-color-value', `${flagCssValue}`);
         flagIcon.setAttribute('data-for-flag', flagName);
@@ -601,7 +684,7 @@
             let maxLength = event.target.getAttribute('maxlength') ?? 40;
             let boundCounter = document.querySelector(`.flagger-settings-content__counter[data-for-flag="${flagName}"]`);
             if (boundCounter) {
-                // @ts-expect-error implicit conversion from string to number to string
+                // @ts-ignore implicit conversion from string to number to string
                 boundCounter.textContent = maxLength - this.value.length;
                 if (this.value.length <= 15) {
                     boundCounter.classList.remove('color-warn', 'color-alert');
@@ -628,7 +711,7 @@
             flagInputLengthCounter.classList.add('color-alert');
         if (isAddedFlagRow) {
             flagInput.value = flagShortText;
-            // @ts-expect-error implicit conversion
+            // @ts-ignore implicit conversion
             flagInputLengthCounter.textContent = 40 - flagShortText.length;
         }
         let deleteCheckbox = document.createElement('input');
@@ -637,14 +720,14 @@
         deleteCheckbox.name = `${flagName}-flag-selection`;
         deleteCheckbox.setAttribute('data-for-flag', flagName);
         deleteCheckbox.addEventListener('input', toggleDeletedState);
-        let cancelIcon = document.createElement('i');
-        cancelIcon.setAttribute('class', `fa-solid fa-xmark ${classNamespace}list-row-btn ${classNamespace}list-row-btn--cancel`);
+        let cancelIcon = Icons2.customIcon('cross');
+        cancelIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--cancel`);
         cancelIcon.setAttribute('data-for-flag', flagName);
-        let saveIcon = document.createElement('i');
-        saveIcon.setAttribute('class', `fa-solid fa-check ${classNamespace}list-row-btn ${classNamespace}list-row-btn--save`);
+        let saveIcon = Icons2.customIcon('check');
+        saveIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--save`);
         saveIcon.setAttribute('data-for-flag', flagName);
-        let editIcon = document.createElement('i');
-        editIcon.setAttribute('class', `fa-regular fa-pencil ${classNamespace}list-row-btn ${classNamespace}list-row-btn--edit`);
+        let editIcon = Icons2.customIcon('pencil');
+        editIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--edit`);
         editIcon.setAttribute('data-for-flag', flagName);
         shortTextRow.append(flagIconLabel || flagIcon, flagColorPicker, flagText, flagInput, flagInputLengthCounter, deleteCheckbox, cancelIcon, saveIcon, editIcon);
         // ------ Flag Info Row ------
@@ -696,7 +779,6 @@
         return [shortTextRow, flagInfoRow, hoverTextRow];
     }
     function createFlagMeaningRows() {
-        const classNamespace = "flagger-settings-content__";
         let rowList = [];
         for (const flagPair of Object.entries(wkFlaggerData.availableFlags)) {
             rowList.push(...createFlagRows(flagPair));
@@ -708,21 +790,24 @@
             return;
         const itemId = getCurrentItemId();
         const flagElement = document.querySelector(".wk-flagger__flag--button");
+        if (!flagElement) {
+            alert("WK Flagger: Something went wrong! The flag dropdown is missing.");
+            return;
+        }
         const color = wkFlaggerData.itemFlagMap[itemId];
-        flagElement?.setAttribute("class", "fa-flag wk-flagger__flag wk-flagger__flag--button");
+        flagElement.setAttribute("class", "wk-flagger__flag wk-flagger__flag--button");
         if (color === undefined) {
-            flagElement?.classList.add("fa-regular");
+            flagElement.innerHTML = createFlag().innerHTML;
         }
         else {
-            flagElement?.classList.add("fa-solid", `wk-flagger__flag--${color}`);
+            flagElement.classList.add(`wk-flagger__flag--${color}`);
         }
     }
-    function createFlag(type, className) {
-        const flagElement = document.createElement("i");
-        flagElement.classList.add(`fa-${type}`, "fa-flag", "wk-flagger__flag");
-        if (className) {
+    function createFlag(className, isEmpty = false) {
+        const flagElement = Icons2.customIcon(`flag${isEmpty ? '-empty' : ''}`);
+        flagElement.classList.add("wk-flagger__flag");
+        if (className)
             flagElement.classList.add(`wk-flagger__flag--${className}`);
-        }
         return flagElement;
     }
     function createFlagLegend() {
@@ -741,7 +826,7 @@
         let legendHeader = document.createElement('div');
         legendHeader.classList.add(`wk-flagger__flag-labels--header`);
         legendHeader.title = "WK Flagger Labels";
-        let headerFlag = createFlag('solid');
+        let headerFlag = createFlag();
         headerFlag.classList.add(`wk-flagger__flag-labels--header-icon`);
         headerFlag.ariaHidden = "true";
         let legendHeaderText = document.createElement('span');
@@ -763,7 +848,7 @@
             entryFlagWrapper.classList.add(`wk-flagger__flag-labels--flags`);
             let entryFlag = document.createElement('div');
             entryFlag.classList.add(`wk-flagger__flag-labels--flag`);
-            let flagIcon = createFlag('solid', flagName);
+            let flagIcon = createFlag(flagName);
             entryFlag.append(flagIcon);
             entryFlagWrapper.append(entryFlag);
             let entryDisplayTypeElement = document.createElement('div');
@@ -792,21 +877,21 @@
         const statisticsElement = document.querySelector(statisticsClass);
         const flagElementWrapper = document.createElement("div");
         flagElementWrapper.classList.add("wk-flagger__wrapper");
-        const flagElement = createFlag("regular", "button");
+        const flagElement = createFlag("button", true);
         flagElement.addEventListener("click", () => toggleDropdown());
         flagElementWrapper.append(flagElement);
         statisticsElement?.prepend(flagElementWrapper);
         const dropdownElement = document.createElement("div");
         dropdownElement.classList.add("wk-flagger__dropdown");
         flagElementWrapper.append(dropdownElement);
-        const dropdownNoFlag = createFlag("regular", "no-flag");
+        const dropdownNoFlag = createFlag("no-flag", true);
         dropdownNoFlag.addEventListener("click", () => {
             setFlagForCurrentItem(undefined);
             toggleDropdown(false);
             updateShownFlag();
         });
         const dropdownColoredFlags = Object.keys(wkFlaggerData.availableFlags).map((name) => {
-            const flag = createFlag("solid", name);
+            const flag = createFlag(name);
             flag.addEventListener("click", () => {
                 setFlagForCurrentItem(name);
                 toggleDropdown(false);
@@ -823,10 +908,10 @@
     }
     function insertCss(refresh = false) {
         const flagColors = `${statisticsClass} .wk-flagger__wrapper, #wk-flagger-settings, .wk-flagger__flag-labels-button {\n${Object.entries(wkFlaggerData.availableFlags).map((kvp) => {
-            return `  .wk-flagger__flag--${kvp[0]} { color: ${kvp[1].color} }`;
+            return `  .wk-flagger__flag--${kvp[0]} { color: ${kvp[1].color}; }`;
         }).join('\n')}\n}`;
         let css = GM_getResourceText('flagger-style');
-        css += `\n${flagColors}`;
+        css += `\n\n${flagColors}`;
         if (refresh) {
             document.getElementById('wk-flagger-css').innerHTML = css;
         }
@@ -862,4 +947,3 @@
     }
     document.addEventListener("turbo:load", () => init());
 })();
-export {};
