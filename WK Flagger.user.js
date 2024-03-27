@@ -7,7 +7,7 @@
 // @match        https://www.wanikani.com/*
 // @match        https://preview.wanikani.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=wanikani.com
-// @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/8e0e34682c20c7db0dba7a35c8b6dcc5f1795c82/flagger.css
+// @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/bc0a7ac79562ac95608f25833d3362b3dc54defb/flagger.css
 // @grant        GM_getResourceText
 // @grant        unsafeWindow
 // @license      MIT
