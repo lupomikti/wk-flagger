@@ -558,7 +558,7 @@
         let flagIcon;
         if (!isAddedFlagRow) {
             flagIcon = Icons2.customIcon('flag');
-            flagIcon.classList.add(`wk-flagger__flag wk-flagger__flag--${flagName}`);
+            flagIcon.classList.add("wk-flagger__flag", `wk-flagger__flag--${flagName}`);
         }
         else {
             flagIcon = Icons2.customIcon('flag-empty');
