@@ -50,6 +50,10 @@
             'flag',
             "M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32V64 368 480c0 17.7 14.3 32 32 32s32-14.3 32-32V352l64.3-16.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L64 48V32z",
             [448, 512],
+        ],
+        [
+            'pencil',
+            "M410.3 231l11.3-11.3-33.9-33.9-62.1-62.1L291.7 89.8l-11.3 11.3-22.6 22.6L58.6 322.9c-10.4 10.4-18 23.3-22.2 37.4L1 480.7c-2.5 8.4-.2 17.5 6.1 23.7s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L387.7 253.7 410.3 231zM160 399.4l-9.1 22.7c-4 3.1-8.5 5.4-13.3 6.9L59.4 452l23-78.1c1.4-4.9 3.8-9.4 6.9-13.3l22.7-9.1v32c0 8.8 7.2 16 16 16h32zM362.7 18.7L348.3 33.2 325.7 55.8 314.3 67.1l33.9 33.9 62.1 62.1 33.9 33.9 11.3-11.3 22.6-22.6 14.5-14.5c25-25 25-65.5 0-90.5L453.3 18.7c-25-25-65.5-25-90.5 0zm-47.4 168l-144 144c-6.2 6.2-16.4 6.2-22.6 0s-6.2-16.4 0-22.6l144-144c6.2-6.2 16.4-6.2 22.6 0s6.2 16.4 0 22.6z",
         ]
     ]);
     if (!wkof) {
@@ -455,88 +459,6 @@
     }
     function saveAndCommit(event) {
         // TODO
-        if (!globalEditingState) {
-            // error
-            return;
-        }
-        let saveButtonsOfRowsInAddingOrEditing = settingsDialog.querySelectorAll(`[data-state="adding"] .flagger-settings-content__list-row-btn--save, [data-state="editing"] .flagger-settings-content__list-row-btn--save`);
-        saveButtonsOfRowsInAddingOrEditing.forEach(btn => { btn.click(); }); // call saveRowChanges via the save buttons
-        let rowsInDeleting = settingsDialog.querySelectorAll(`[data-state="deleting"]`);
-        if (rowsInDeleting && rowsInDeleting.length > 0)
-            toggleDeletingState();
-        // if after saving rows and toggling 'deleting' state we have exited the editing state, close the dialog as there are no changes to commit
-        if (!globalEditingState)
-            closeSettingsDialog();
-        // polyfill for Object.groupBy but only works with Arrays instead of any Iterable
-        const groupBy = function (array, callbackFn) {
-            return array.reduce((acc, val, i) => {
-                // normally wouldn't need the null coalescence since `undefined` will be coerced into "undefined"
-                (acc[callbackFn(val, i) ?? 'undefined'] ||= []).push(val);
-                return acc;
-            }, Object.create(null));
-        };
-        // my own implementation to avoid having to import something like lodash into the script
-        const invertBy = function (obj, callbackFn) {
-            return Object.entries(obj).reduce((acc, [key, value]) => {
-                (acc[callbackFn(value)] ||= []).push(key);
-                return acc;
-            }, {});
-        };
-        let inputsOfEditedRows = settingsDialog.querySelectorAll(`.flagger-settings-content__flag-list [data-state="edited"] input[data-for-flag], .flagger-settings-content__flag-list [data-state="edited"] select[data-for-flag]`);
-        // Object.groupBy not typed yet (coming in 5.4). Sadly will require a target of esnext (and eventually a minimum of es2024), so this polyfill will have to do
-        let groupedInputs = groupBy(Array.from(inputsOfEditedRows), (input) => input.dataset.forFlag);
-        const idToPropertyMap = {
-            'color-picker': 'color',
-            'short-text': 'shortText',
-            'display': 'questionType',
-            'hover': 'longText'
-        };
-        const buildFlagDataValue = (obj, input) => {
-            let currentId = input.id;
-            const slicePos = currentId.search('flag-') + 5;
-            const currentIdEnder = currentId.slice(slicePos);
-            return currentIdEnder in idToPropertyMap ? (obj[idToPropertyMap[currentIdEnder]] = input.value, obj) : obj;
-        };
-        // list of key-value pairs [name:string, value:FlagData["name"]]
-        let flagsToUpdate = [];
-        for (const flagName of Object.keys(groupedInputs)) {
-            flagsToUpdate.push([flagName, groupedInputs[flagName].reduce(buildFlagDataValue, {})]);
-        }
-        let inputsOfAddedRows = settingsDialog.querySelectorAll(`.flagger-settings-content__flag-list [data-state="added"] input[data-for-flag], .flagger-settings-content__flag-list [data-state="added"] select[data-for-flag]`);
-        groupedInputs = groupBy(Array.from(inputsOfAddedRows), (input => input.dataset.forflag));
-        // list of key-value pairs [name:string, value:FlagData["name"]]
-        let flagsToAdd = [];
-        for (const flagName of Object.keys(groupedInputs)) {
-            flagsToAdd.push([flagName, groupedInputs[flagName].reduce(buildFlagDataValue, {})]);
-        }
-        // get the flag names of the rows that have been marked for deletion and check if that flag name has any values using it in the item map
-        //   if values using the flag name exist in the map, delay deletion, alert user and prompt them for a replacement value if desired, allow them to select no replacement and inform this will remove the items from the map
-        let flagNamesToBeDeleted = Array.from(document.querySelectorAll('[data-state="deleted"] input[type="checkbox"]')).map(checkbox => checkbox.dataset.forFlag);
-        // object that maps flag names to an array of item IDs that currently have that flag as a value
-        let itemsToDisassociateByName = invertBy(wkFlaggerData.itemFlagMap, assignedColor => flagNamesToBeDeleted.includes(assignedColor) ? assignedColor : "other");
-        // the names of the flags for which there exist items that are mapped to that flag | used in the UI for asking for replacement
-        let deletedFlagsWithItems = Object.entries(itemsToDisassociateByName).flatMap(([color, itemIdList]) => itemIdList.length > 0 ? [color] : []);
-        if (deletedFlagsWithItems.length > 0) {
-            let replacementMap = askForReplacements(deletedFlagsWithItems);
-            replaceFlagsInItemFlagMap(replacementMap);
-        }
-        // check that no flags in update list are in delete list OR make sure user understands delete trumps update
-        // filter out flags in update list with changed names (name in availableFlags or not) and add them to a new list of name changes
-        //   this new list will inform us that we need to find the initial name using previousStateMap and delete from availableFlags
-        // check that no flags in addition list are in availableFlags already; for the ones that are, add them to the update list so the values can be updated, inform the user
-        // check that flags in delete list are in availableFlags; for the ones that aren't, remove them from the deletion list as the rows will be replaced upon next open of settings
-        // save a copy of the data object before operations for rollback
-        // do updates first, going through flags to update and finding them in the data, updating their values
-        // spread new flags into availableFlags, also add flags that had their names changed as new flags then delete the old entries using their initial name
-        // delete item map values with flag name that will be deleted if no replacement was given
-        //   if replacement given, find item map values with the old flag and change them to the replacement value
-        // delete remaining flags in deletion list from availableFlags
-        // save the cache if there were no errors, if errors rollback
-        // remove all children of flag-list, just in case
-        settingsDialog.querySelector(`.flagger-settings-content__flag-list`)?.replaceChildren();
-        previousStateMap = {};
-        settingsDialog.close();
-        insertCss(true /* refresh */);
     }
     function askForReplacements(flags) {
         // TODO
