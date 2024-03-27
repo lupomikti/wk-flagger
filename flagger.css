@@ -44,6 +44,10 @@ dialog::backdrop {
   background: var(--color-modal-mask, #000C);
 }
 
+#wk-flagger-settings {
+  --icon-height: 1.2rem;
+}
+
 #wk-flagger-settings .flagger-settings-header {
   display: flex;
   flex-wrap: wrap;
