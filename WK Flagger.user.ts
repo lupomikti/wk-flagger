@@ -681,11 +681,11 @@ type StateData = {
         let flagIcon: HTMLElement
         if (!isAddedFlagRow) {
             flagIcon = Icons2.customIcon('flag')
-            flagIcon.setAttribute('class', `wk-flagger__flag wk-flagger__flag--${flagName}`)
+            flagIcon.classList.add(`wk-flagger__flag wk-flagger__flag--${flagName}`)
         }
         else {
             flagIcon = Icons2.customIcon('flag-empty')
-            flagIcon.setAttribute('class', `wk-flagger__flag`)
+            flagIcon.classList.add(`wk-flagger__flag`)
         }
         flagIcon.setAttribute('data-color-value', `${flagCssValue}`)
         flagIcon.setAttribute('data-for-flag', flagName)
@@ -774,15 +774,15 @@ type StateData = {
         deleteCheckbox.addEventListener('input', toggleDeletedState)
 
         let cancelIcon = Icons2.customIcon('cross')
-        cancelIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--cancel`)
+        cancelIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--cancel`)
         cancelIcon.setAttribute('data-for-flag', flagName)
 
         let saveIcon = Icons2.customIcon('check')
-        saveIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--save`)
+        saveIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--save`)
         saveIcon.setAttribute('data-for-flag', flagName)
 
         let editIcon = Icons2.customIcon('pencil')
-        editIcon.setAttribute('class', `${classNamespace}list-row-btn ${classNamespace}list-row-btn--edit`)
+        editIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--edit`)
         editIcon.setAttribute('data-for-flag', flagName)
 
         shortTextRow.append(flagIconLabel || flagIcon, flagColorPicker, flagText, flagInput, flagInputLengthCounter, deleteCheckbox, cancelIcon, saveIcon, editIcon)
@@ -1023,7 +1023,7 @@ type StateData = {
 
     function insertCss(refresh = false) {
         const flagColors = `${statisticsClass} .wk-flagger__wrapper, #wk-flagger-settings, .wk-flagger__flag-labels-button {\n${Object.entries(wkFlaggerData.availableFlags).map((kvp) => {
-            return `  .wk-flagger__flag--${kvp[0]} { color: ${kvp[1].color}; }`
+            return `  .wk-flagger__flag--${kvp[0]} { fill: ${kvp[1].color}; }`
         }).join('\n')}\n}`
 
         let css = GM_getResourceText('flagger-style')
