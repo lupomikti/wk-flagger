@@ -213,7 +213,7 @@
                 previousStateMap[flagName].state = currentState;
             }
             for (let child of container.childNodes) {
-                if ((child.tagName === 'SVG' && child.classList.contains('wk-flagger__flag')) || (child.tagName === 'LABEL' && child.firstChild?.nodeName === 'SVG')) {
+                if ((child.tagName === 'svg' && child.classList.contains('wk-flagger__flag')) || (child.tagName === 'LABEL' && child.firstChild?.nodeName === 'svg')) {
                     if (!['adding', 'editing'].includes(currentState)) {
                         // wrap icon in a label for color picker input
                         let wrapperLabel = document.createElement('label');
