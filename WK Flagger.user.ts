@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-03-27
+// @version      2024-03-28
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
@@ -17,25 +17,17 @@
 import { WKOF, Menu } from './wkof'
 
 declare class Icons {
+    static VERSION_NUM: number;
     static customIconTxt(icon: string): string;
     static customIcon(icon: string): HTMLElement;
-    static addCustomIcons<T>(icons: [string, string, T?][]): void;
-    static setupSVGElements(): void;
-}
-
-declare class Icons2 {
-    static readonly version: number;
-    static customIconTxt(icon: string): string;
-    static customIcon(icon: string): HTMLElement;
-    static addCustomIcons<T>(icons: [string, string, T?][]): void;
+    static addCustomIcons(icons: [string, string, (number | number[])?][]): void;
     static setupSVGElements(): void;
 }
 
 declare global {
     interface Window {
         wkof: WKOF & Menu,
-        Icons: typeof Icons,
-        Icons2: typeof Icons2
+        Icons: typeof Icons
     }
 }
 
@@ -74,11 +66,8 @@ type StateData = {
 (function () {
     'use strict';
 
-    /* global wkof, Icons, Icons2 */
-    const { wkof, Icons, Icons2 } = unsafeWindow || window
-
-    const isUsingIcons2 = Icons2 != null
-    const IconsClass = isUsingIcons2 ? Icons2 : Icons
+    /* global wkof, Icons */
+    const { wkof, Icons } = window
 
     const cacheFilename = "wkFlaggerData"
     const cacheFileVersion = "2.1"
@@ -107,16 +96,16 @@ type StateData = {
     }
 
     // Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.
-    IconsClass.addCustomIcons([
+    Icons.addCustomIcons([
         [
             'flag-empty',
             "M48 24C48 10.7 37.3 0 24 0S0 10.7 0 24V64 350.5 400v88c0 13.3 10.7 24 24 24s24-10.7 24-24V388l80.3-20.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L48 52V24zm0 77.5l96.6-24.2c27-6.7 55.5-3.6 80.4 8.8c54.9 27.4 118.7 29.7 175 6.8V334.7l-24.4 9.1c-33.7 12.6-71.2 10.7-103.4-5.4c-48.2-24.1-103.3-30.1-155.6-17.1L48 338.5v-237z",
-            isUsingIcons2 ? [448, 512] : 512,
+            [448, 512]
         ],
         [
             'flag',
             "M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32V64 368 480c0 17.7 14.3 32 32 32s32-14.3 32-32V352l64.3-16.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L64 48V32z",
-            isUsingIcons2 ? [448, 512] : 512,
+            [448, 512]
         ],
         [
             'pencil',
@@ -695,11 +684,11 @@ type StateData = {
 
         let flagIcon: HTMLElement
         if (!isAddedFlagRow) {
-            flagIcon = IconsClass.customIcon('flag')
+            flagIcon = Icons.customIcon('flag')
             flagIcon.classList.add("wk-flagger__flag", `wk-flagger__flag--${flagName}`)
         }
         else {
-            flagIcon = IconsClass.customIcon('flag-empty')
+            flagIcon = Icons.customIcon('flag-empty')
             flagIcon.classList.add(`wk-flagger__flag`)
         }
         flagIcon.setAttribute('data-color-value', `${flagCssValue}`)
@@ -788,15 +777,15 @@ type StateData = {
 
         deleteCheckbox.addEventListener('input', toggleDeletedState)
 
-        let cancelIcon = IconsClass.customIcon('cross')
+        let cancelIcon = Icons.customIcon('cross')
         cancelIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--cancel`)
         cancelIcon.setAttribute('data-for-flag', flagName)
 
-        let saveIcon = IconsClass.customIcon('check')
+        let saveIcon = Icons.customIcon('tick')
         saveIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--save`)
         saveIcon.setAttribute('data-for-flag', flagName)
 
-        let editIcon = IconsClass.customIcon('pencil')
+        let editIcon = Icons.customIcon('pencil')
         editIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--edit`)
         editIcon.setAttribute('data-for-flag', flagName)
 
@@ -896,7 +885,7 @@ type StateData = {
     }
 
     function createFlag(className?: string | undefined, isEmpty: boolean = false) {
-        const flagElement = IconsClass.customIcon(`flag${isEmpty ? '-empty' : ''}`)
+        const flagElement = Icons.customIcon(`flag${isEmpty ? '-empty' : ''}`)
         flagElement.classList.add("wk-flagger__flag")
         if (className) flagElement.classList.add(`wk-flagger__flag--${className}`)
         return flagElement
