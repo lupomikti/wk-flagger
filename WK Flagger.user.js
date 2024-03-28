@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-03-26
+// @version      2024-03-27
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
 // @match        https://preview.wanikani.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=wanikani.com
+// @require      https://greasyfork.org/scripts/489759-wk-custom-icons/code/CustomIcons.js
 // @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/bc0a7ac79562ac95608f25833d3362b3dc54defb/flagger.css
 // @grant        GM_getResourceText
 // @grant        unsafeWindow
@@ -14,8 +15,10 @@
 // ==/UserScript==
 (function () {
     'use strict';
-    /* global wkof, Icons2 */
-    const { wkof, Icons2 } = unsafeWindow || window;
+    /* global wkof, Icons, Icons2 */
+    const { wkof, Icons, Icons2 } = unsafeWindow || window;
+    const isUsingIcons2 = Icons2 != null;
+    const IconsClass = isUsingIcons2 ? Icons2 : Icons;
     const cacheFilename = "wkFlaggerData";
     const cacheFileVersion = "2.1";
     const scriptId = "wkFlagger";
@@ -40,16 +43,16 @@
         magenta: { color: "#ff44ff", questionType: "both", shortText: "A default value. Change me!", longText: "" },
     };
     // Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.
-    Icons2.addCustomIcons([
+    IconsClass.addCustomIcons([
         [
             'flag-empty',
             "M48 24C48 10.7 37.3 0 24 0S0 10.7 0 24V64 350.5 400v88c0 13.3 10.7 24 24 24s24-10.7 24-24V388l80.3-20.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L48 52V24zm0 77.5l96.6-24.2c27-6.7 55.5-3.6 80.4 8.8c54.9 27.4 118.7 29.7 175 6.8V334.7l-24.4 9.1c-33.7 12.6-71.2 10.7-103.4-5.4c-48.2-24.1-103.3-30.1-155.6-17.1L48 338.5v-237z",
-            [448, 512],
+            isUsingIcons2 ? [448, 512] : 512,
         ],
         [
             'flag',
             "M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32V64 368 480c0 17.7 14.3 32 32 32s32-14.3 32-32V352l64.3-16.1c41.1-10.3 84.6-5.5 122.5 13.4c44.2 22.1 95.5 24.8 141.7 7.4l34.7-13c12.5-4.7 20.8-16.6 20.8-30V66.1c0-23-24.2-38-44.8-27.7l-9.6 4.8c-46.3 23.2-100.8 23.2-147.1 0c-35.1-17.6-75.4-22-113.5-12.5L64 48V32z",
-            [448, 512],
+            isUsingIcons2 ? [448, 512] : 512,
         ],
         [
             'pencil',
@@ -557,11 +560,11 @@
         shortTextRow.setAttribute('data-state', startingState);
         let flagIcon;
         if (!isAddedFlagRow) {
-            flagIcon = Icons2.customIcon('flag');
+            flagIcon = IconsClass.customIcon('flag');
             flagIcon.classList.add("wk-flagger__flag", `wk-flagger__flag--${flagName}`);
         }
         else {
-            flagIcon = Icons2.customIcon('flag-empty');
+            flagIcon = IconsClass.customIcon('flag-empty');
             flagIcon.classList.add(`wk-flagger__flag`);
         }
         flagIcon.setAttribute('data-color-value', `${flagCssValue}`);
@@ -642,13 +645,13 @@
         deleteCheckbox.name = `${flagName}-flag-selection`;
         deleteCheckbox.setAttribute('data-for-flag', flagName);
         deleteCheckbox.addEventListener('input', toggleDeletedState);
-        let cancelIcon = Icons2.customIcon('cross');
+        let cancelIcon = IconsClass.customIcon('cross');
         cancelIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--cancel`);
         cancelIcon.setAttribute('data-for-flag', flagName);
-        let saveIcon = Icons2.customIcon('check');
+        let saveIcon = IconsClass.customIcon('check');
         saveIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--save`);
         saveIcon.setAttribute('data-for-flag', flagName);
-        let editIcon = Icons2.customIcon('pencil');
+        let editIcon = IconsClass.customIcon('pencil');
         editIcon.classList.add(`${classNamespace}list-row-btn`, `${classNamespace}list-row-btn--edit`);
         editIcon.setAttribute('data-for-flag', flagName);
         shortTextRow.append(flagIconLabel || flagIcon, flagColorPicker, flagText, flagInput, flagInputLengthCounter, deleteCheckbox, cancelIcon, saveIcon, editIcon);
@@ -726,7 +729,7 @@
         }
     }
     function createFlag(className, isEmpty = false) {
-        const flagElement = Icons2.customIcon(`flag${isEmpty ? '-empty' : ''}`);
+        const flagElement = IconsClass.customIcon(`flag${isEmpty ? '-empty' : ''}`);
         flagElement.classList.add("wk-flagger__flag");
         if (className)
             flagElement.classList.add(`wk-flagger__flag--${className}`);
