@@ -7,10 +7,9 @@
 // @match        https://www.wanikani.com/*
 // @match        https://preview.wanikani.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=wanikani.com
-// @require      https://greasyfork.org/scripts/489759-wk-custom-icons/code/CustomIcons.js
+// @require      https://greasyfork.org/scripts/489759-wk-custom-icons/code/CustomIcons.js?version=1350892
 // @resource     flagger-style  https://raw.githubusercontent.com/lupomikti/wk-flagger/bc0a7ac79562ac95608f25833d3362b3dc54defb/flagger.css
 // @grant        GM_getResourceText
-// @grant        unsafeWindow
 // @license      MIT
 // ==/UserScript==
 
