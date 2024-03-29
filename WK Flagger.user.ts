@@ -66,7 +66,7 @@ type StateData = {
     'use strict';
 
     /* global wkof, Icons */
-    const { wkof, Icons } = window
+    const { wkof, Icons } = window.unsafeWindow || window
 
     const cacheFilename = "wkFlaggerData"
     const cacheFileVersion = "2.1"
