@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-03-28
+// @version      2024-03-29
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
@@ -16,7 +16,7 @@
 import { WKOF, Menu } from './wkof'
 
 declare class Icons {
-    static VERSION_NUM: number;
+    static readonly VERSION_NUM: number;
     static customIconTxt(icon: string): string;
     static customIcon(icon: string): HTMLElement;
     static addCustomIcons(icons: [string, string, (number | number[])?][]): void;
@@ -396,8 +396,11 @@ type StateData = {
         shortDescriptionInput?.focus()
     }
 
-    function toggleDeletingState(event: Event) {
+    function toggleDeletingState(event?: Event) {
         let mainRows: HTMLElement[] = Array.from(document.querySelectorAll('#wk-flagger-settings [data-state]') as NodeListOf<HTMLElement>).filter((row) => row.classList.length === 1)
+        let deletedCount = mainRows.reduce((count, row) => {
+            return count + (row.querySelector('input[type="checkbox"]:checked') as HTMLInputElement ? 1 : 0)
+        }, 0)
         let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete') as HTMLButtonElement
         let addNewFlagButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-add') as HTMLButtonElement
 
@@ -435,7 +438,7 @@ type StateData = {
             return
         }
 
-        markForDeleteButton.textContent = addNewFlagButton.checkVisibility() ? 'Confirm Selected' : 'Mark Flags for Deletion'
+        markForDeleteButton.textContent = addNewFlagButton.checkVisibility() ? deletedCount > 0 ? 'Confirm Selected' : 'Return without Deleting' : 'Mark Flags for Deletion'
         // taking advantage of some default css from wanikani wherein `[hidden] { display: none !important; }`
         addNewFlagButton.hidden = addNewFlagButton.checkVisibility()
 
@@ -444,12 +447,27 @@ type StateData = {
 
     function toggleDeletedState(event: Event) {
         let currentRow = (event.currentTarget as HTMLElement).parentElement
-        if (!globalEditingState || !currentRow || currentRow.dataset.state as EditingState !== 'deleting') return
+
+        if (!globalEditingState || !currentRow || ['deleting', 'deleted'].includes(currentRow.dataset.state as EditingState)) return
+        
         let currentFlag = currentRow.dataset.forFlag
         let flagRows: NodeListOf<HTMLElement> = document.querySelectorAll(`#wk-flagger-settings [data-state][data-for-flag="${currentFlag}"]`)
+
         flagRows.forEach((row) => {
-            row.dataset.state = 'deleted'
+            row.dataset.state = row.dataset.state === 'deleted' ? 'deleting' : 'deleted'
         })
+
+        // Change the button that confirms or cancels the deleting state based on whether there are any rows marked as deleted
+
+        let mainRows: HTMLElement[] = Array.from(document.querySelectorAll('#wk-flagger-settings [data-state]') as NodeListOf<HTMLElement>).filter((row) => row.classList.length === 1)
+        let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete') as HTMLButtonElement
+
+        let deletedCount = mainRows.reduce((count, row) => {
+            return count + (row.querySelector('input[type="checkbox"]:checked') as HTMLInputElement ? 1 : 0)
+        }, 0)
+
+        if (deletedCount > 0) markForDeleteButton.textContent = "Confirm Selected"
+        else markForDeleteButton.textContent = "Return without Deleting"
     }
 
     function toggleHidden(event: Event) {

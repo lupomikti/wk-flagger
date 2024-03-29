@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WK Flagger
 // @namespace    http://tampermonkey.net/
-// @version      2024-03-28
+// @version      2024-03-29
 // @description  Add coloured flags to reviews as a memorization aid
 // @author       Gorbit99 (original author), heavily customized by LupoMikti
 // @match        https://www.wanikani.com/*
@@ -332,6 +332,9 @@
     }
     function toggleDeletingState(event) {
         let mainRows = Array.from(document.querySelectorAll('#wk-flagger-settings [data-state]')).filter((row) => row.classList.length === 1);
+        let deletedCount = mainRows.reduce((count, row) => {
+            return count + (row.querySelector('input[type="checkbox"]:checked') ? 1 : 0);
+        }, 0);
         let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete');
         let addNewFlagButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-add');
         for (let row of mainRows) {
@@ -364,20 +367,30 @@
             // throw some kind of error (don't use `throw`) and handle it
             return;
         }
-        markForDeleteButton.textContent = addNewFlagButton.checkVisibility() ? 'Confirm Selected' : 'Mark Flags for Deletion';
+        markForDeleteButton.textContent = addNewFlagButton.checkVisibility() ? deletedCount > 0 ? 'Confirm Selected' : 'Return without Deleting' : 'Mark Flags for Deletion';
         // taking advantage of some default css from wanikani wherein `[hidden] { display: none !important; }`
         addNewFlagButton.hidden = addNewFlagButton.checkVisibility();
         globalEditingState = Array.from(mainRows).some((row) => row.dataset.state !== 'initial');
     }
     function toggleDeletedState(event) {
         let currentRow = event.currentTarget.parentElement;
-        if (!globalEditingState || !currentRow || currentRow.dataset.state !== 'deleting')
+        if (!globalEditingState || !currentRow || ['deleting', 'deleted'].includes(currentRow.dataset.state))
             return;
         let currentFlag = currentRow.dataset.forFlag;
         let flagRows = document.querySelectorAll(`#wk-flagger-settings [data-state][data-for-flag="${currentFlag}"]`);
         flagRows.forEach((row) => {
-            row.dataset.state = 'deleted';
+            row.dataset.state = row.dataset.state === 'deleted' ? 'deleting' : 'deleted';
         });
+        // Change the button that confirms or cancels the deleting state based on whether there are any rows marked as deleted
+        let mainRows = Array.from(document.querySelectorAll('#wk-flagger-settings [data-state]')).filter((row) => row.classList.length === 1);
+        let markForDeleteButton = document.querySelector('#wk-flagger-settings .flagger-settings-content__list-row--button-delete');
+        let deletedCount = mainRows.reduce((count, row) => {
+            return count + (row.querySelector('input[type="checkbox"]:checked') ? 1 : 0);
+        }, 0);
+        if (deletedCount > 0)
+            markForDeleteButton.textContent = "Confirm Selected";
+        else
+            markForDeleteButton.textContent = "Return without Deleting";
     }
     function toggleHidden(event) {
         // get all rows with data-state editing or adding and data-hover-text-hidden (true or false; they should all be the same value but that's not enforced)
