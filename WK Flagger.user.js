@@ -374,7 +374,7 @@
     }
     function toggleDeletedState(event) {
         let currentRow = event.currentTarget.parentElement;
-        if (!globalEditingState || !currentRow || ['deleting', 'deleted'].includes(currentRow.dataset.state))
+        if (!globalEditingState || !currentRow || !['deleting', 'deleted'].includes(currentRow.dataset.state))
             return;
         let currentFlag = currentRow.dataset.forFlag;
         let flagRows = document.querySelectorAll(`#wk-flagger-settings [data-state][data-for-flag="${currentFlag}"]`);

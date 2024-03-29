@@ -448,7 +448,7 @@ type StateData = {
     function toggleDeletedState(event: Event) {
         let currentRow = (event.currentTarget as HTMLElement).parentElement
 
-        if (!globalEditingState || !currentRow || ['deleting', 'deleted'].includes(currentRow.dataset.state as EditingState)) return
+        if (!globalEditingState || !currentRow || !['deleting', 'deleted'].includes(currentRow.dataset.state as EditingState)) return
         
         let currentFlag = currentRow.dataset.forFlag
         let flagRows: NodeListOf<HTMLElement> = document.querySelectorAll(`#wk-flagger-settings [data-state][data-for-flag="${currentFlag}"]`)
